@@ -16,7 +16,7 @@ public class CacheHandler<Key: AnyObject, Object> {
     }
     let expiredCachePolicy: ExpiredCachePolicy
     
-    private let storage = NSCache<Key, CachedObject<Object>>()
+    let storage = NSCache<Key, CachedObject<Object>>()
     
     // MARK: - Init
     
@@ -38,7 +38,7 @@ public class CacheHandler<Key: AnyObject, Object> {
     ///   - object: object to store in cache
     ///   - key: key to identify object
     public func addObject(_ object: Object, withKey key: Key) {
-        self.storage.setObject(CachedObject(object), forKey: key)
+        self.storage.setObject(CachedObject(object, cacheDuration: self.cacheDuration, expiredCachePolicy: self.expiredCachePolicy), forKey: key)
     }
     
     /// Get object from cache. If cache duraction is expired (> cacheDuration), will remove object from cache.
@@ -52,9 +52,7 @@ public class CacheHandler<Key: AnyObject, Object> {
         }
         
         // Check if cached object is still valid (its cache duration is not expired)
-        let now = Date()
-        let cacheDate = object.cacheDate
-        if now.timeIntervalSince(cacheDate) <= cacheDuration {
+        if Utils.cacheAvailable(cacheDate: object.cacheDate, cacheDuration: self.cacheDuration) {
             return object.object
         }
         
@@ -73,14 +71,43 @@ public class CacheHandler<Key: AnyObject, Object> {
     }
     
     // MARK: - Class to store any Struct in cache
-    private class CachedObject<O>: NSObject {
+    class CachedObject<O>: NSObject, NSDiscardableContent {
         let object: O
         let cacheDate: Date
+        let cacheDuration: TimeInterval
+        let expiredCachePolicy: ExpiredCachePolicy
         
-        init(_ object: O) {
+        init(_ object: O, cacheDuration: TimeInterval, expiredCachePolicy: ExpiredCachePolicy) {
             self.object = object
             self.cacheDate = Date()
+            self.cacheDuration = cacheDuration
+            self.expiredCachePolicy = expiredCachePolicy
+        }
+        
+        func beginContentAccess() -> Bool {
+            return Utils.cacheAvailable(cacheDate: self.cacheDate, cacheDuration: self.cacheDuration)
+        }
+        
+        func endContentAccess() {}
+        
+        func discardContentIfPossible() {}
+        
+        func isContentDiscarded() -> Bool {
+            
+            // Check if cache is still available
+            if Utils.cacheAvailable(cacheDate: self.cacheDate, cacheDuration: self.cacheDuration) {
+                return false
+            }
+            
+            // If not, discard object if expired cache policy is set to .ReturnNil
+            return expiredCachePolicy == .ReturnNil
+        }
+    }
+    
+    private struct Utils {
+        static func cacheAvailable(cacheDate: Date, cacheDuration: TimeInterval) -> Bool {
+            let now = Date()
+            return now.timeIntervalSince(cacheDate) <= cacheDuration
         }
     }
 }
-

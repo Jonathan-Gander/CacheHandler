@@ -64,7 +64,7 @@ To get an object from your `CacheHandler`, simply call "getObject` function:
 let object: MyObject? = cacheHandler.getObject(withKey: "obj1")
 ```
 
-You can get the object if it is in cache and its cache duration is less or equal to `cacheDuration` seconds. Or it it is in cache, its cache duration is greater than `cacheDuration` seconds and `expiredCachePolicy` is set to `.ReturnObject`. In other cases, you get a `nil`.
+You can get the object if it is in cache and its cache duration is less or equal to `cacheDuration` seconds. Or if it is in cache, its cache duration is greater than `cacheDuration` seconds and `expiredCachePolicy` is set to `.ReturnObject`. In other cases, you get a `nil`.
 
 ## Licence
 
